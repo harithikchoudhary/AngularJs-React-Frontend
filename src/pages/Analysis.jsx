@@ -2,12 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiChevronRight, FiChevronDown, FiX } from "react-icons/fi";
 import { FaFolder, FaFile } from "react-icons/fa";
-import {
-  mockProjectStructure,
-  mockAnalysisResult,
-  mockMigrationStatus,
-  mockTargetStructure,
-} from "../api/mockData";
+import { migrationService } from "../api/migrationService";
 
 const ProjectStructureView = ({ structure, isEditable, onStructureChange }) => {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
@@ -686,7 +681,7 @@ const Analysis = () => {
   const [instruction, setInstruction] = useState("");
   const [structure, setStructure] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
-  const [migrationStatus, setMigrationStatus] = useState(null);
+  const [projectId, setProjectId] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [error, setError] = useState("");
@@ -711,49 +706,73 @@ const Analysis = () => {
     setIsAnalyzing(true);
     setError("");
 
-    if (inputType === "url" && !repoUrl) {
-      setError("Please enter a GitHub repository URL");
-      setIsAnalyzing(false);
-      return;
-    }
+    try {
+      let result;
+      if (inputType === "url") {
+        if (!repoUrl) {
+          setError("Please enter a GitHub repository URL");
+          setIsAnalyzing(false);
+          return;
+        }
+        result = await migrationService.analyzeGitHub(repoUrl);
+      } else {
+        if (!selectedFile) {
+          setError("Please select a ZIP file");
+          setIsAnalyzing(false);
+          return;
+        }
+        result = await migrationService.analyzeZip(selectedFile);
+      }
 
-    if (inputType === "file" && !selectedFile) {
-      setError("Please select a ZIP file");
+      setStructure(result.structure);
+      setAnalysisResult(result.analysis);
+      setProjectId(result.projectId);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
       setIsAnalyzing(false);
-      return;
     }
-
-    // Simulate API delay
-    setTimeout(() => {
-      setStructure(mockTargetStructure);
-      setAnalysisResult(mockAnalysisResult);
-      setIsAnalyzing(false);
-    }, 1500);
   };
 
   const handleMigrate = async () => {
+    if (!projectId || !structure) {
+      setError("Please analyze the project first");
+      return;
+    }
+
     setIsMigrating(true);
+    setError("");
 
-    // Simulate migration process
-    const interval = setInterval(() => {
-      setMigrationStatus(mockMigrationStatus);
-    }, 1000);
-
-    // Stop after 5 seconds
-    setTimeout(() => {
-      clearInterval(interval);
-      setIsMigrating(false);
+    try {
+      if (inputType === "url") {
+        await migrationService.migrateFromGitHub(repoUrl);
+      } else {
+        await migrationService.migrateFromZip(selectedFile);
+      }
       navigate("/result");
-    }, 5000);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   const handleEditStructure = () => {
     setIsEditing(true);
   };
 
-  const handleSaveStructure = (updatedStructure) => {
-    setStructure(updatedStructure);
-    setIsEditing(false);
+  const handleSaveStructure = async (updatedStructure) => {
+    try {
+      setIsMigrating(true);
+      await migrationService.migrate(projectId, updatedStructure, true);
+      setStructure(updatedStructure);
+      setIsEditing(false);
+      navigate("/result");
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -793,7 +812,8 @@ const Analysis = () => {
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
-                        <path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
+                        <path
+                          d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
                       </svg>
                       <span>GitHub URL</span>
                     </div>
@@ -813,7 +833,8 @@ const Analysis = () => {
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
-                        <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                        <path
+                          d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
                       </svg>
                       <span>ZIP File</span>
                     </div>
@@ -835,7 +856,8 @@ const Analysis = () => {
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
-                          <path d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.137 18.167 20 14.418 20 10c0-5.523-4.477-10-10-10z" />
+                          <path
+                            d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.137 18.167 20 14.418 20 10c0-5.523-4.477-10-10-10z" />
                         </svg>
                       </div>
                       <input
@@ -1112,7 +1134,7 @@ const Analysis = () => {
                     >
                       <path
                         fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414-1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                         clipRule="evenodd"
                       />
                     </svg>

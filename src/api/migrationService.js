@@ -9,9 +9,13 @@ export const migrationService = {
       const response = await axios.post(`${API_BASE}/github/analyze`, {
         github_url: githubUrl,
       });
-      return response.data;
+      return {
+        structure: response.data.target_structure,
+        analysis: response.data.analysis_results,
+        projectId: response.data.project_id
+      };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data?.detail || error.message;
     }
   },
 
@@ -20,14 +24,19 @@ export const migrationService = {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      
       const response = await axios.post(`${API_BASE}/zip/analyze`, formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data;
+      return {
+        structure: response.data.target_structure,
+        analysis: response.data.analysis_results,
+        projectId: response.data.project_id
+      };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data?.detail || error.message;
     }
   },
 
@@ -43,9 +52,18 @@ export const migrationService = {
           responseType: "blob",
         }
       );
-      return response.data;
+      // Create a download link for the ZIP file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'migrated-project.zip');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return { success: true };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data?.detail || error.message;
     }
   },
 
@@ -54,20 +72,30 @@ export const migrationService = {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      
       const response = await axios.post(`${API_BASE}/zip`, formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
         responseType: "blob",
       });
-      return response.data;
+      // Create a download link for the ZIP file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'migrated-project.zip');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return { success: true };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data?.detail || error.message;
     }
   },
 
   // Perform migration with target structure
-  migrate: async (projectId, targetStructure, changes) => {
+  migrate: async (projectId, targetStructure, changes = false) => {
     try {
       const response = await axios.post(
         `${API_BASE}/migrate`,
@@ -80,9 +108,18 @@ export const migrationService = {
           responseType: "blob",
         }
       );
-      return response.data;
+      // Create a download link for the ZIP file
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'migrated-project.zip');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      return { success: true };
     } catch (error) {
-      throw error.response?.data || error.message;
+      throw error.response?.data?.detail || error.message;
     }
   },
 };
