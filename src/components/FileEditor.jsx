@@ -3,23 +3,21 @@ import { HiDocument, HiChevronDown, HiChevronRight } from "react-icons/hi2";
 import { FaMagic } from "react-icons/fa";
 import SourceFileSelector from "./SourceFileSelector";
 import axios from "../api/axios";
-
 const ALLOWED_FILE_TYPES = [
+  // AngularJS (1.x) file types
   'controller',
-  'config',
-  'view',
-  'model',
-  'repository',
-  'cshtml',
-  'cshtml_cs',
-  'layout',
-  'razor_component',
+  'directive',
   'service',
-  'middleware',
-  'program',
-  'csproj'
-];
+  'filter',
+  'factory',
+  'module',
 
+  'component',
+  'pipe',
+  'guard',
+  'resolver',
+  'interceptor'
+];
 
 const FileEditor = ({ name, data, onChange, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
