@@ -1,108 +1,193 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { migrationService } from "../api/migrationService";
 import { ProjectStructureView } from "../components/ProjectStructureView";
-
+import { toast } from "react-toastify"; // Assuming toast is imported from react-toastify
 
 const Analysis = () => {
-  const [repoUrl, setRepoUrl] = useState("");
-  const [targetReactVersion, setTargetReactVersion] = useState("18");
-  const [instruction, setInstruction] = useState("");
-  const [structure, setStructure] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [projectId, setProjectId] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
-  const [error, setError] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [inputType, setInputType] = useState("url"); // "url" or "file"
+  // Consolidated state management
+  const [inputValues, setInputValues] = useState({
+    repoUrl: "",
+    targetReactVersion: "18",
+    instruction: "",
+    selectedFile: null,
+    inputType: "url", // "url" or "file"
+  });
+
+  const [projectData, setProjectData] = useState({
+    structure: null,
+    projectId: null,
+  });
+
+  const [uiState, setUiState] = useState({
+    isLoading: false,
+    error: "",
+    isEditing: false,
+  });
+
+  // Destructure for convenience
+  const { repoUrl, instruction, selectedFile, inputType } = inputValues;
+  const { structure, projectId } = projectData;
+  const { isLoading, error, isEditing } = uiState;
+
+  // Validation check
+  const isValidInput =
+    inputType === "url" ? Boolean(repoUrl) : Boolean(selectedFile);
+
+  // Update field helper
+  const updateField = (field, value) => {
+    setInputValues((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file && file.name.toLowerCase().endsWith(".zip")) {
-      setSelectedFile(file);
-      setError("");
+      updateField("selectedFile", file);
+      setUiState((prev) => ({ ...prev, error: "" }));
     } else {
-      setSelectedFile(null);
-      setError("Please select a valid ZIP file");
+      updateField("selectedFile", null);
+      setUiState((prev) => ({
+        ...prev,
+        error: "Please select a valid ZIP file",
+      }));
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsAnalyzing(true);
-    setError("");
+  const setStructure = (structure) => {
+    // set structre in projectData
+    setProjectData((prev) => ({ ...prev, structure }));
+  };
 
+  const handleAnalysis = async () => {
     try {
+      setUiState((prev) => ({ ...prev, isLoading: true, error: "" }));
+
       let result;
       if (inputType === "url") {
         if (!repoUrl) {
-          setError("Please enter a GitHub repository URL");
-          setIsAnalyzing(false);
+          setUiState((prev) => ({
+            ...prev,
+            error: "Please enter a GitHub repository URL",
+            isLoading: false,
+          }));
           return;
         }
         result = await migrationService.analyzeGitHub(repoUrl);
       } else {
         if (!selectedFile) {
-          setError("Please select a ZIP file");
-          setIsAnalyzing(false);
+          setUiState((prev) => ({
+            ...prev,
+            error: "Please select a ZIP file",
+            isLoading: false,
+          }));
           return;
         }
         result = await migrationService.analyzeZip(selectedFile);
       }
 
-      setStructure(result.structure);
-      setAnalysisResult(result.analysis);
-      setProjectId(result.projectId);
-    } catch (err) {
-      setError(err.toString());
+      setProjectData({
+        structure: result.structure || result, // Handle both result formats
+        projectId: result.projectId || null,
+      });
+    } catch (error) {
+      setUiState((prev) => ({ ...prev, error: error.toString() }));
     } finally {
-      setIsAnalyzing(false);
+      setUiState((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
-  const handleMigrate = async () => {
-    if (!projectId || !structure) {
-      setError("Please analyze the project first");
+  const handleMigration = async () => {
+    if (!isValidInput) {
+      setUiState((prev) => ({
+        ...prev,
+        error: "Please provide valid input for migration",
+      }));
       return;
     }
 
-    setIsMigrating(true);
-    setError("");
-
     try {
+      setUiState((prev) => ({ ...prev, isLoading: true, error: "" }));
+
+      let result;
       if (inputType === "url") {
-        await migrationService.migrateFromGitHub(repoUrl);
+        result = await migrationService.migrateFromGitHub(repoUrl);
       } else {
-        await migrationService.migrateFromZip(selectedFile);
+        result = await migrationService.migrateFromZip(selectedFile);
       }
-    } catch (err) {
-      setError(err.toString());
+
+      // Trigger file download with the response
+      const url = window.URL.createObjectURL(new Blob([result]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "react-migration.zip");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      // Show success message
+      toast.success("Migration completed successfully! File downloaded.");
+
+      // Reset the state to go back to initial view
+      setProjectData({ structure: null, projectId: null });
+      setInputValues({
+        repoUrl: "",
+        targetReactVersion: "18",
+        instruction: "",
+        selectedFile: null,
+        inputType: "url",
+      });
+    } catch (error) {
+      const errorMessage = error.toString();
+      setUiState((prev) => ({ ...prev, error: errorMessage }));
+      toast.error("Migration failed: " + errorMessage);
     } finally {
-      setIsMigrating(false);
+      setUiState((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleAnalysis();
+  };
+
   const handleEditStructure = () => {
-    setIsEditing(true);
+    setUiState((prev) => ({ ...prev, isEditing: true }));
   };
 
   const handleSaveStructure = async (updatedStructure) => {
     try {
-      setIsMigrating(true);
+      setUiState((prev) => ({ ...prev, isLoading: true, error: "" }));
       await migrationService.migrate(projectId, updatedStructure, true);
-      setStructure(updatedStructure);
-      setIsEditing(false);
-    } catch (err) {
-      setError(err.toString());
+      setProjectData((prev) => ({ ...prev, structure: updatedStructure }));
+      setUiState((prev) => ({ ...prev, isEditing: false }));
+    } catch (error) {
+      setUiState((prev) => ({ ...prev, error: error.toString() }));
     } finally {
-      setIsMigrating(false);
+      setUiState((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
   const handleCancelEdit = () => {
-    setIsEditing(false);
+    setUiState((prev) => ({ ...prev, isEditing: false }));
   };
+
+  // Loading spinner component for reuse
+  const LoadingSpinner = () => (
+    <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12">
@@ -118,13 +203,13 @@ const Analysis = () => {
             </p>
           </div>
 
-          {!analysisResult ? (
+          {!projectData.projectId ? (
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="space-y-6">
                 <div className="flex justify-center space-x-4">
                   <button
                     type="button"
-                    onClick={() => setInputType("url")}
+                    onClick={() => updateField("inputType", "url")}
                     className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                       inputType === "url"
                         ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
@@ -137,15 +222,14 @@ const Analysis = () => {
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
-                        <path
-                          d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
+                        <path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
                       </svg>
                       <span>GitHub URL</span>
                     </div>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setInputType("file")}
+                    onClick={() => updateField("inputType", "file")}
                     className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                       inputType === "file"
                         ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
@@ -158,8 +242,7 @@ const Analysis = () => {
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
-                        <path
-                          d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                        <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
                       </svg>
                       <span>ZIP File</span>
                     </div>
@@ -181,8 +264,7 @@ const Analysis = () => {
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
-                          <path
-                            d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.137 18.167 20 14.418 20 10c0-5.523-4.477-10-10-10z" />
+                          <path d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.137 18.167 20 14.418 20 10c0-5.523-4.477-10-10-10z" />
                         </svg>
                       </div>
                       <input
@@ -190,7 +272,7 @@ const Analysis = () => {
                         type="text"
                         required
                         value={repoUrl}
-                        onChange={(e) => setRepoUrl(e.target.value)}
+                        onChange={(e) => updateField("repoUrl", e.target.value)}
                         placeholder="https://github.com/username/angularjs-project"
                         className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400
                                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150"
@@ -265,7 +347,6 @@ const Analysis = () => {
                 )}
               </div>
 
-              
               <div className="space-y-2">
                 <label
                   htmlFor="instruction"
@@ -276,7 +357,7 @@ const Analysis = () => {
                 <textarea
                   id="instruction"
                   value={instruction}
-                  onChange={(e) => setInstruction(e.target.value)}
+                  onChange={(e) => updateField("instruction", e.target.value)}
                   placeholder="Enter any specific instructions for the AngularJS to React migration..."
                   className="block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150"
@@ -284,30 +365,36 @@ const Analysis = () => {
                 />
               </div>
 
-              <div>
+              <div className="flex space-x-4 mt-4">
                 <button
-                  type="submit"
-                  disabled={
-                    isAnalyzing ||
-                    (inputType === "url" && !repoUrl) ||
-                    (inputType === "file" && !selectedFile)
-                  }
-                  className={`w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium transition-all duration-200 transform hover:scale-[1.02]
-                            ${
-                              isAnalyzing ||
-                              (inputType === "url" && !repoUrl) ||
-                              (inputType === "file" && !selectedFile)
-                                ? "bg-blue-300 cursor-not-allowed text-white/80"
-                                : "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-xl"
-                            }`}
+                  type="button"
+                  onClick={handleAnalysis}
+                  disabled={isLoading || !isValidInput}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
-                  {isAnalyzing ? (
-                    <div className="flex items-center space-x-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/20 border-t-white"></div>
-                      <span>Analyzing AngularJS Project...</span>
-                    </div>
+                  {isLoading ? (
+                    <span className="flex items-center">
+                      <LoadingSpinner />
+                      Analyzing...
+                    </span>
                   ) : (
                     "Start Analysis"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMigration}
+                  disabled={isLoading || !isValidInput}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center">
+                      <LoadingSpinner />
+                      Migrating...
+                    </span>
+                  ) : (
+                    "Start Migration"
                   )}
                 </button>
               </div>
@@ -392,16 +479,16 @@ const Analysis = () => {
 
                 <button
                   type="button"
-                  onClick={handleMigrate}
-                  disabled={isMigrating}
+                  onClick={handleMigration}
+                  disabled={isLoading}
                   className={`w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium transition-all duration-200 transform hover:scale-[1.02]
                     ${
-                      isMigrating
+                      isLoading
                         ? "bg-[#82c9d2] cursor-not-allowed text-white/80"
                         : "bg-gradient-to-r from-[#008597] to-[#007b8a] text-white hover:shadow-xl"
                     }`}
                 >
-                  {isMigrating ? (
+                  {isLoading ? (
                     <div className="flex items-center space-x-3">
                       <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/20 border-t-white"></div>
                       <span>Converting to React...</span>
@@ -425,6 +512,22 @@ const Analysis = () => {
                   )}
                 </button>
               </div>
+              {projectData.projectId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProjectData({ structure: null, projectId: null });
+                    setInputValues((prev) => ({
+                      ...prev,
+                      repoUrl: "",
+                      selectedFile: null,
+                    }));
+                  }}
+                  className="px-4 py-2 mt-4 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Go Back to Start
+                </button>
+              )}
             </div>
           )}
 
