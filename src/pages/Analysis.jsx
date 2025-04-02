@@ -190,14 +190,14 @@ const Analysis = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-8 border border-gray-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-8 border border-gray-200">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-800">
+            <h1 className="text-4xl font-bold text-black mb-4">
               AngularJS to React Migration
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
               Transform your AngularJS application into a modern React
               application with our intelligent migration tool
             </p>
@@ -212,8 +212,8 @@ const Analysis = () => {
                     onClick={() => updateField("inputType", "url")}
                     className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                       inputType === "url"
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
-                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                        ? "bg-black text-white shadow-lg"
+                        : "bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
                     }`}
                   >
                     <div className="flex items-center space-x-2">
@@ -232,8 +232,8 @@ const Analysis = () => {
                     onClick={() => updateField("inputType", "file")}
                     className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                       inputType === "file"
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
-                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
+                        ? "bg-black text-white shadow-lg"
+                        : "bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
                     }`}
                   >
                     <div className="flex items-center space-x-2">
@@ -274,8 +274,8 @@ const Analysis = () => {
                         value={repoUrl}
                         onChange={(e) => updateField("repoUrl", e.target.value)}
                         placeholder="https://github.com/username/angularjs-project"
-                        className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400
-                                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150"
+                        className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400
+                                 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition duration-150"
                       />
                     </div>
                   </div>
@@ -289,9 +289,9 @@ const Analysis = () => {
                     </label>
                     <div className="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-300 border-dashed rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors duration-150">
                       <div className="space-y-3 text-center">
-                        <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                        <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
                           <svg
-                            className="h-8 w-8 text-blue-600"
+                            className="h-8 w-8 text-gray-600"
                             stroke="currentColor"
                             fill="none"
                             viewBox="0 0 48 48"
@@ -308,7 +308,7 @@ const Analysis = () => {
                         <div className="flex text-sm text-gray-600 justify-center">
                           <label
                             htmlFor="zipFile"
-                            className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                            className="relative cursor-pointer bg-white rounded-md font-medium text-black hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-black"
                           >
                             <span>Upload a file</span>
                             <input
@@ -330,7 +330,7 @@ const Analysis = () => {
                     {selectedFile && (
                       <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
                         <svg
-                          className="w-5 h-5 text-green-500"
+                          className="w-5 h-5 text-black"
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >
@@ -359,8 +359,8 @@ const Analysis = () => {
                   value={instruction}
                   onChange={(e) => updateField("instruction", e.target.value)}
                   placeholder="Enter any specific instructions for the AngularJS to React migration..."
-                  className="block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150"
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400
+                           focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition duration-150"
                   rows="4"
                 />
               </div>
@@ -370,7 +370,7 @@ const Analysis = () => {
                   type="button"
                   onClick={handleAnalysis}
                   disabled={isLoading || !isValidInput}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {isLoading ? (
                     <span className="flex items-center">
@@ -386,7 +386,7 @@ const Analysis = () => {
                   type="button"
                   onClick={handleMigration}
                   disabled={isLoading || !isValidInput}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {isLoading ? (
                     <span className="flex items-center">
@@ -401,12 +401,12 @@ const Analysis = () => {
             </form>
           ) : (
             <div className="space-y-8">
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-100 rounded-xl p-6 shadow-lg">
+              <div className="bg-gray-100 border border-gray-200 rounded-xl p-6 shadow-lg">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
                       <svg
-                        className="h-6 w-6 text-green-500"
+                        className="h-6 w-6 text-gray-800"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
@@ -419,10 +419,10 @@ const Analysis = () => {
                     </div>
                   </div>
                   <div className="ml-4">
-                    <h3 className="text-lg font-medium text-green-800">
+                    <h3 className="text-lg font-medium text-gray-800">
                       Analysis Complete
                     </h3>
-                    <p className="text-green-700 mt-1">
+                    <p className="text-gray-700 mt-1">
                       The target React structure has been generated. You can
                       review and edit it before proceeding with the conversion.
                     </p>
@@ -434,7 +434,7 @@ const Analysis = () => {
                 <button
                   type="button"
                   onClick={handleEditStructure}
-                  className="w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 text-gray-700 transition-all duration-200 transform hover:scale-[1.02]"
+                  className="w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 transition-all duration-200 transform hover:scale-[1.02]"
                 >
                   <svg
                     className="w-5 h-5 mr-2"
@@ -447,21 +447,21 @@ const Analysis = () => {
                 </button>
 
                 {isEditing && (
-                  <div className="mt-6 border border-gray-200 rounded-xl overflow-hidden shadow-lg">
-                    <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex justify-between items-center">
+                  <div className="mt-6 border border-gray-300 rounded-xl overflow-hidden shadow-lg">
+                    <div className="p-4 bg-gray-100 border-b border-gray-300 flex justify-between items-center">
                       <h3 className="text-lg font-medium text-gray-900">
                         Target Structure
                       </h3>
                       <div className="flex space-x-3">
                         <button
                           onClick={handleCancelEdit}
-                          className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+                          className="px-4 py-2 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-150"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleSaveStructure(structure)}
-                          className="px-4 py-2 text-sm text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-colors duration-150"
+                          className="px-4 py-2 text-sm text-white bg-black rounded-lg hover:bg-gray-800 transition-colors duration-150"
                         >
                           Save Changes
                         </button>
@@ -484,8 +484,8 @@ const Analysis = () => {
                   className={`w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium transition-all duration-200 transform hover:scale-[1.02]
                     ${
                       isLoading
-                        ? "bg-[#82c9d2] cursor-not-allowed text-white/80"
-                        : "bg-gradient-to-r from-[#008597] to-[#007b8a] text-white hover:shadow-xl"
+                        ? "bg-gray-400 cursor-not-allowed text-white/80"
+                        : "bg-black text-white hover:shadow-xl"
                     }`}
                 >
                   {isLoading ? (
@@ -523,7 +523,7 @@ const Analysis = () => {
                       selectedFile: null,
                     }));
                   }}
-                  className="px-4 py-2 mt-4 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  className="px-4 py-2 mt-4 bg-gray-800 text-white rounded-md hover:bg-black"
                 >
                   Go Back to Start
                 </button>
@@ -532,12 +532,12 @@ const Analysis = () => {
           )}
 
           {error && (
-            <div className="rounded-xl bg-red-50 p-4 border border-red-100 shadow-lg">
+            <div className="rounded-xl bg-gray-100 p-4 border border-gray-200 shadow-lg">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                     <svg
-                      className="h-5 w-5 text-red-500"
+                      className="h-5 w-5 text-gray-800"
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >
@@ -550,7 +550,7 @@ const Analysis = () => {
                   </div>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700">{error}</p>
+                  <p className="text-sm text-gray-800">{error}</p>
                 </div>
               </div>
             </div>
