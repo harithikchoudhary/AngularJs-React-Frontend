@@ -1,6 +1,6 @@
 import axios from "./axios";
 
-const API_BASE = "/api/v1/migrator";
+const API_BASE = "http://localhost:8000/api/v1/migrator";
 
 export const migrationService = {
   // Analyze GitHub repository
