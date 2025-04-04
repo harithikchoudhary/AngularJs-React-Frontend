@@ -2,6 +2,7 @@ import { useState } from "react";
 import { migrationService } from "../api/migrationService";
 import { ProjectStructureView } from "../components/ProjectStructureView";
 import { toast } from "react-toastify"; // Assuming toast is imported from react-toastify
+import { Loader, Search, ArrowRight } from "lucide-react";
 
 const Analysis = () => {
   // Consolidated state management
@@ -20,6 +21,8 @@ const Analysis = () => {
 
   const [uiState, setUiState] = useState({
     isLoading: false,
+    isAnalyzing: false,
+    isMigrating: false,
     error: "",
     isEditing: false,
   });
@@ -27,7 +30,7 @@ const Analysis = () => {
   // Destructure for convenience
   const { repoUrl, instruction, selectedFile, inputType } = inputValues;
   const { structure, projectId } = projectData;
-  const { isLoading, error, isEditing } = uiState;
+  const { isLoading, isAnalyzing, isMigrating, error, isEditing } = uiState;
 
   // Validation check
   const isValidInput =
@@ -53,13 +56,18 @@ const Analysis = () => {
   };
 
   const setStructure = (structure) => {
-    // set structre in projectData
+    // set structure in projectData
     setProjectData((prev) => ({ ...prev, structure }));
   };
 
   const handleAnalysis = async () => {
     try {
-      setUiState((prev) => ({ ...prev, isLoading: true, error: "" }));
+      setUiState((prev) => ({
+        ...prev,
+        isLoading: true,
+        isAnalyzing: true,
+        error: "",
+      }));
 
       let result;
       if (inputType === "url") {
@@ -68,6 +76,7 @@ const Analysis = () => {
             ...prev,
             error: "Please enter a GitHub repository URL",
             isLoading: false,
+            isAnalyzing: false,
           }));
           return;
         }
@@ -78,6 +87,7 @@ const Analysis = () => {
             ...prev,
             error: "Please select a ZIP file",
             isLoading: false,
+            isAnalyzing: false,
           }));
           return;
         }
@@ -88,10 +98,17 @@ const Analysis = () => {
         structure: result.structure || result, // Handle both result formats
         projectId: result.projectId || null,
       });
+
+      toast.success("Analysis completed successfully!");
     } catch (error) {
       setUiState((prev) => ({ ...prev, error: error.toString() }));
+      toast.error("Analysis failed: " + error.toString());
     } finally {
-      setUiState((prev) => ({ ...prev, isLoading: false }));
+      setUiState((prev) => ({
+        ...prev,
+        isLoading: false,
+        isAnalyzing: false,
+      }));
     }
   };
 
@@ -105,23 +122,22 @@ const Analysis = () => {
     }
 
     try {
-      setUiState((prev) => ({ ...prev, isLoading: true, error: "" }));
+      setUiState((prev) => ({
+        ...prev,
+        isLoading: true,
+        isMigrating: true,
+        error: "",
+      }));
 
       let result;
-      if (inputType === "url") {
+      if (projectId) {
+        // If we have a projectId, use the current structure to migrate
+        result = await migrationService.migrate(projectId, structure);
+      } else if (inputType === "url") {
         result = await migrationService.migrateFromGitHub(repoUrl);
       } else {
         result = await migrationService.migrateFromZip(selectedFile);
       }
-
-      // Trigger file download with the response
-      const url = window.URL.createObjectURL(new Blob([result]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "react-migration.zip");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
 
       // Show success message
       toast.success("Migration completed successfully! File downloaded.");
@@ -140,7 +156,11 @@ const Analysis = () => {
       setUiState((prev) => ({ ...prev, error: errorMessage }));
       toast.error("Migration failed: " + errorMessage);
     } finally {
-      setUiState((prev) => ({ ...prev, isLoading: false }));
+      setUiState((prev) => ({
+        ...prev,
+        isLoading: false,
+        isMigrating: false,
+      }));
     }
   };
 
@@ -158,9 +178,11 @@ const Analysis = () => {
       setUiState((prev) => ({ ...prev, isLoading: true, error: "" }));
       await migrationService.migrate(projectId, updatedStructure, true);
       setProjectData((prev) => ({ ...prev, structure: updatedStructure }));
+      toast.success("Structure updated successfully!");
       setUiState((prev) => ({ ...prev, isEditing: false }));
     } catch (error) {
       setUiState((prev) => ({ ...prev, error: error.toString() }));
+      toast.error("Update failed: " + error.toString());
     } finally {
       setUiState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -215,6 +237,7 @@ const Analysis = () => {
                         ? "bg-black text-white shadow-lg"
                         : "bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
                     }`}
+                    disabled={isLoading}
                   >
                     <div className="flex items-center space-x-2">
                       <svg
@@ -235,6 +258,7 @@ const Analysis = () => {
                         ? "bg-black text-white shadow-lg"
                         : "bg-white text-gray-800 hover:bg-gray-100 border border-gray-300"
                     }`}
+                    disabled={isLoading}
                   >
                     <div className="flex items-center space-x-2">
                       <svg
@@ -276,6 +300,7 @@ const Analysis = () => {
                         placeholder="https://github.com/username/angularjs-project"
                         className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400
                                  focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition duration-150"
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -287,7 +312,11 @@ const Analysis = () => {
                     >
                       Upload ZIP File
                     </label>
-                    <div className="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-300 border-dashed rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors duration-150">
+                    <div
+                      className={`mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-300 border-dashed rounded-xl bg-gray-50 ${
+                        !isLoading ? "hover:bg-gray-100" : ""
+                      } transition-colors duration-150`}
+                    >
                       <div className="space-y-3 text-center">
                         <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
                           <svg
@@ -308,7 +337,11 @@ const Analysis = () => {
                         <div className="flex text-sm text-gray-600 justify-center">
                           <label
                             htmlFor="zipFile"
-                            className="relative cursor-pointer bg-white rounded-md font-medium text-black hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-black"
+                            className={`relative ${
+                              !isLoading
+                                ? "cursor-pointer"
+                                : "cursor-not-allowed"
+                            } bg-white rounded-md font-medium text-black hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-black`}
                           >
                             <span>Upload a file</span>
                             <input
@@ -318,6 +351,7 @@ const Analysis = () => {
                               accept=".zip"
                               className="sr-only"
                               onChange={handleFileChange}
+                              disabled={isLoading}
                             />
                           </label>
                           <p className="pl-1">or drag and drop</p>
@@ -362,42 +396,50 @@ const Analysis = () => {
                   className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400
                            focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition duration-150"
                   rows="4"
+                  disabled={isLoading}
                 />
               </div>
+              <div className="flex flex-wrap justify-center gap-4 mt-4 md:flex-nowrap">
+  {/* Start Analysis Button */}
+  <button
+    type="button"
+    onClick={handleAnalysis}
+    disabled={isLoading || !isValidInput}
+    className="w-48 px-4 py-2 bg-black text-white font-medium text-base rounded-md hover:bg-gray-800 hover:text-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-black space-x-2"
+  >
+    {isAnalyzing ? (
+      <span className="flex items-center space-x-2">
+        <Loader className="animate-spin w-5 h-5" />
+        <span>Analyzing...</span>
+      </span>
+    ) : (
+      <span className="flex items-center space-x-2">
+        <Search className="w-5 h-5" />
+        <span>Start Analysis</span>
+      </span>
+    )}
+  </button>
 
-              <div className="flex space-x-4 mt-4">
-                <button
-                  type="button"
-                  onClick={handleAnalysis}
-                  disabled={isLoading || !isValidInput}
-                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center">
-                      <LoadingSpinner />
-                      Analyzing...
-                    </span>
-                  ) : (
-                    "Start Analysis"
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleMigration}
-                  disabled={isLoading || !isValidInput}
-                  className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center">
-                      <LoadingSpinner />
-                      Migrating...
-                    </span>
-                  ) : (
-                    "Start Migration"
-                  )}
-                </button>
-              </div>
+  {/* Start Migration Button */}
+  <button
+    type="button"
+    onClick={handleMigration}
+    disabled={isLoading || !isValidInput}
+    className="w-48 px-4 py-2 bg-white text-black font-medium text-base rounded-md hover:bg-gray-200 hover:text-black transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-black space-x-2"
+  >
+    {isMigrating ? (
+      <span className="flex items-center space-x-2">
+        <Loader className="animate-spin w-5 h-5" />
+        <span>Migrating...</span>
+      </span>
+    ) : (
+      <span className="flex items-center space-x-2">
+        <ArrowRight className="w-5 h-5" />
+        <span>Start Migration</span>
+      </span>
+    )}
+  </button>
+</div>
             </form>
           ) : (
             <div className="space-y-8">
@@ -434,7 +476,12 @@ const Analysis = () => {
                 <button
                   type="button"
                   onClick={handleEditStructure}
-                  className="w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 transition-all duration-200 transform hover:scale-[1.02]"
+                  disabled={isLoading}
+                  className={`w-full flex items-center justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-medium transition-all duration-200 transform hover:scale-[1.02] ${
+                    isLoading
+                      ? "opacity-50 cursor-not-allowed bg-gray-100"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-800"
+                  }`}
                 >
                   <svg
                     className="w-5 h-5 mr-2"
@@ -455,22 +502,39 @@ const Analysis = () => {
                       <div className="flex space-x-3">
                         <button
                           onClick={handleCancelEdit}
-                          className="px-4 py-2 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+                          disabled={isLoading}
+                          className={`px-4 py-2 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg ${
+                            isLoading
+                              ? "opacity-50 cursor-not-allowed"
+                              : "hover:bg-gray-50"
+                          } transition-colors duration-150`}
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleSaveStructure(structure)}
-                          className="px-4 py-2 text-sm text-white bg-black rounded-lg hover:bg-gray-800 transition-colors duration-150"
+                          disabled={isLoading}
+                          className={`px-4 py-2 text-sm text-white bg-black rounded-lg ${
+                            isLoading
+                              ? "opacity-50 cursor-not-allowed"
+                              : "hover:bg-gray-800"
+                          } transition-colors duration-150 flex items-center`}
                         >
-                          Save Changes
+                          {isLoading ? (
+                            <>
+                              <LoadingSpinner />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save Changes"
+                          )}
                         </button>
                       </div>
                     </div>
                     <div className="p-6">
                       <ProjectStructureView
                         structure={structure}
-                        isEditable={isEditing}
+                        isEditable={isEditing && !isLoading}
                         onStructureChange={setStructure}
                       />
                     </div>
@@ -488,7 +552,7 @@ const Analysis = () => {
                         : "bg-black text-white hover:shadow-xl"
                     }`}
                 >
-                  {isLoading ? (
+                  {isMigrating ? (
                     <div className="flex items-center space-x-3">
                       <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/20 border-t-white"></div>
                       <span>Converting to React...</span>
@@ -523,7 +587,12 @@ const Analysis = () => {
                       selectedFile: null,
                     }));
                   }}
-                  className="px-4 py-2 mt-4 bg-gray-800 text-white rounded-md hover:bg-black"
+                  disabled={isLoading}
+                  className={`px-4 py-2 mt-4 bg-gray-800 text-white rounded-md ${
+                    isLoading
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-black"
+                  }`}
                 >
                   Go Back to Start
                 </button>

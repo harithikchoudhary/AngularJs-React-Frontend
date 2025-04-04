@@ -43,7 +43,14 @@ export const ProjectStructureView = ({
   };
 
   const handleFileEdit = (filePath, fileData) => {
-    setEditingFile({ path: filePath, data: fileData });
+    // Ensure source_files is an array
+    const data = {
+      ...fileData,
+      source_files: Array.isArray(fileData.source_files)
+        ? fileData.source_files
+        : [],
+    };
+    setEditingFile({ path: filePath, data });
   };
 
   const handleFileSave = (filePath, updatedData) => {
@@ -63,7 +70,15 @@ export const ProjectStructureView = ({
     // Update the file data
     const fileName = pathSegments[pathSegments.length - 1];
     if (current[fileName]) {
-      current[fileName] = updatedData;
+      // Ensure source_files is properly set as an array
+      current[fileName] = {
+        ...updatedData,
+        source_files: Array.isArray(updatedData.source_files)
+          ? updatedData.source_files
+          : [],
+        file_name: fileName,
+        relative_path: filePath,
+      };
     }
 
     onStructureChange(newStructure);
@@ -88,6 +103,15 @@ export const ProjectStructureView = ({
     setNewItemType(type);
     setNewItemPath(path);
     setIsAddingNew(true);
+    // Reset the form data
+    setNewItemName("");
+    setNewItemData({
+      description: "",
+      file_type: "js",
+      dependencies: [],
+      source_files: [],
+      migration_complexity: "low",
+    });
   };
 
   const handleSaveNewItem = () => {
@@ -111,12 +135,22 @@ export const ProjectStructureView = ({
       current[newItemName] = {};
     } else {
       // Add new file with the expected data structure
+      // Ensure source_files is an array
+      const source_files = Array.isArray(newItemData.source_files)
+        ? newItemData.source_files
+        : typeof newItemData.source_files === "string"
+        ? newItemData.source_files
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+
       current[newItemName] = {
         file_name: newItemName,
         file_type: newItemData.file_type,
         description: newItemData.description,
         dependencies: newItemData.dependencies || [],
-        source_files: newItemData.source_files || [],
+        source_files: source_files,
         relative_path: `${newItemPath}/${newItemName}`.replace(/^\//, ""),
         migration_complexity: newItemData.migration_complexity || "low",
         migration_suggestions: {
@@ -169,6 +203,30 @@ export const ProjectStructureView = ({
     delete current[pathSegments[pathSegments.length - 1]];
     onStructureChange(newStructure);
   };
+
+  const [rawInput, setRawInput] = useState(""); // Temporary input field state
+
+  const handleInputChange = (e) => {
+    setRawInput(e.target.value); // Allows free typing
+  };
+
+  const handleAddFiles = () => {
+    if (!rawInput.trim()) return;
+    
+    const newFiles = rawInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean); // Remove empty values
+  
+    if (newFiles.length > 0) {
+      setNewItemData((prevData) => ({
+        ...prevData,
+        source_files: [...(Array.isArray(prevData.source_files) ? prevData.source_files : []), ...newFiles],
+      }));
+      setRawInput(""); // Reset input field
+    }
+  };
+
 
   const renderAddNewForm = () => {
     return (
@@ -281,6 +339,48 @@ export const ProjectStructureView = ({
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
+              <div>
+  <label className="block text-sm font-medium text-gray-700">
+    Source Files (comma separated)
+  </label>
+  <div className="flex flex-col space-y-2">
+    {/* Display the current source files */}
+    {Array.isArray(newItemData.source_files) && newItemData.source_files.length > 0 && (
+      <div className="flex flex-wrap gap-1">
+        {newItemData.source_files.map((file, index) => (
+          <span key={index} className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded">
+            {file}
+            <button 
+              onClick={() => {
+                const updatedFiles = newItemData.source_files.filter((_, i) => i !== index);
+                setNewItemData({...newItemData, source_files: updatedFiles});
+              }}
+              className="ml-1 text-blue-600 hover:text-blue-800"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+    )}
+    
+    {/* Input for adding new files */}
+    <input
+      type="text"
+      value={rawInput}
+      onChange={handleInputChange}
+      onBlur={handleAddFiles}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleAddFiles();
+        }
+      }}
+      placeholder="Type file names and press Enter"
+      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+    />
+  </div>
+</div>
             </>
           )}
 
@@ -620,26 +720,33 @@ export const ProjectStructureView = ({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Source Files (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={(editingFile.data.source_files || []).join(", ")}
-                  onChange={(e) =>
-                    setEditingFile({
-                      ...editingFile,
-                      data: {
-                        ...editingFile.data,
-                        source_files: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      },
-                    })
-                  }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Source Files (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={
+                      Array.isArray(editingFile.data.source_files)
+                        ? editingFile.data.source_files.join(", ")
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setEditingFile({
+                        ...editingFile,
+                        data: {
+                          ...editingFile.data,
+                          source_files: e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        },
+                      })
+                    }
+                    placeholder="Enter source files, separated by commas"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -715,7 +822,8 @@ export const ProjectStructureView = ({
                       Source Files:
                     </span>
                     <span className="text-gray-700">
-                      {fileData.source_files?.length
+                      {Array.isArray(fileData.source_files) &&
+                      fileData.source_files.length
                         ? fileData.source_files.join(", ")
                         : "None"}
                     </span>
@@ -743,36 +851,53 @@ export const ProjectStructureView = ({
                         Migration Suggestions
                       </h4>
                       {fileData.migration_suggestions.code_transformation && (
-                        <div className="text-xs mb-1">
-                          <span className="font-medium">Transformation: </span>
-                          {fileData.migration_suggestions.code_transformation}
+                        <div className="mb-2">
+                          <span className="text-sm font-medium text-gray-600">
+                            Code Transformation:
+                          </span>
+                          <p className="text-sm text-gray-700 mt-1">
+                            {fileData.migration_suggestions.code_transformation}
+                          </p>
                         </div>
                       )}
                       {fileData.migration_suggestions.potential_challenges
                         ?.length > 0 && (
-                        <div className="text-xs mb-1">
-                          <span className="font-medium">Challenges: </span>
-                          {fileData.migration_suggestions.potential_challenges.join(
-                            ", "
-                          )}
+                        <div className="mb-2">
+                          <span className="text-sm font-medium text-gray-600">
+                            Potential Challenges:
+                          </span>
+                          <ul className="list-disc list-inside text-sm text-gray-700 mt-1">
+                            {fileData.migration_suggestions.potential_challenges.map(
+                              (challenge, index) => (
+                                <li key={index}>{challenge}</li>
+                              )
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                      {fileData.migration_suggestions
+                        .manual_review_required && (
+                        <div className="mb-2">
+                          <span className="text-sm font-medium text-gray-600">
+                            Manual Review Required
+                          </span>
+                          <p className="text-sm text-red-600 mt-1">Yes</p>
                         </div>
                       )}
                       {fileData.migration_suggestions
                         .performance_considerations && (
-                        <div className="text-xs mb-1">
-                          <span className="font-medium">Performance: </span>
-                          {
-                            fileData.migration_suggestions
-                              .performance_considerations
-                          }
+                        <div className="mb-2">
+                          <span className="text-sm font-medium text-gray-600">
+                            Performance Considerations:
+                          </span>
+                          <p className="text-sm text-gray-700 mt-1">
+                            {
+                              fileData.migration_suggestions
+                                .performance_considerations
+                            }
+                          </p>
                         </div>
                       )}
-                      <div className="text-xs">
-                        <span className="font-medium">Review Required: </span>
-                        {fileData.migration_suggestions.manual_review_required
-                          ? "Yes"
-                          : "No"}
-                      </div>
                     </div>
                   )}
                 </>
@@ -785,21 +910,9 @@ export const ProjectStructureView = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-4">
-        <div className="mb-2">
-          <h2 className="text-lg font-medium text-gray-800">
-            Project Structure
-          </h2>
-          {isEditable && (
-            <p className="text-xs text-gray-500">
-              Click on files to view details or folders to expand
-            </p>
-          )}
-        </div>
-        <div className="divide-y divide-gray-100">
-          {renderStructure(structure)}
-        </div>
+    <div className="p-4">
+      <div className="bg-white rounded-lg shadow">
+        {renderStructure(structure)}
         {renderFileDetails()}
       </div>
     </div>
