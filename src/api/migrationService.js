@@ -4,10 +4,11 @@ const API_BASE = "http://localhost:8000/api/v1/migrator";
 
 export const migrationService = {
   // Analyze GitHub repository
-  analyzeGitHub: async (githubUrl) => {
+  analyzeGitHub: async (githubUrl, instruction = "") => {
     try {
       const response = await axios.post(`${API_BASE}/github/analyze`, {
         github_url: githubUrl,
+        instruction: instruction || undefined,
       });
       return {
         structure: response.data.target_structure,
@@ -20,10 +21,13 @@ export const migrationService = {
   },
 
   // Analyze ZIP file
-  analyzeZip: async (file) => {
+  analyzeZip: async (file, instruction = "") => {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (instruction) {
+        formData.append("instruction", instruction);
+      }
       
       const response = await axios.post(`${API_BASE}/zip/analyze`, formData, {
         headers: {
@@ -41,12 +45,13 @@ export const migrationService = {
   },
 
   // Migrate from GitHub
-  migrateFromGitHub: async (githubUrl) => {
+  migrateFromGitHub: async (githubUrl, instruction = "") => {
     try {
       const response = await axios.post(
         `${API_BASE}/github`,
         {
           github_url: githubUrl,
+          instruction: instruction || undefined,
         },
         {
           responseType: "blob",
@@ -68,10 +73,13 @@ export const migrationService = {
   },
 
   // Migrate from ZIP
-  migrateFromZip: async (file) => {
+  migrateFromZip: async (file, instruction = "") => {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (instruction) {
+        formData.append("instruction", instruction);
+      }
       
       const response = await axios.post(`${API_BASE}/zip`, formData, {
         headers: {
@@ -95,7 +103,7 @@ export const migrationService = {
   },
 
   // Perform migration with target structure
-  migrate: async (projectId, targetStructure, changes = false) => {
+  migrate: async (projectId, targetStructure, changes = false, instruction = "") => {
     try {
       const response = await axios.post(
         `${API_BASE}/migrate`,
@@ -103,6 +111,7 @@ export const migrationService = {
           project_id: projectId,
           target_structure: targetStructure,
           changes: changes,
+          instruction: instruction || undefined,
         },
         {
           responseType: "blob",

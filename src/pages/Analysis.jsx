@@ -80,7 +80,7 @@ const Analysis = () => {
           }));
           return;
         }
-        result = await migrationService.analyzeGitHub(repoUrl);
+        result = await migrationService.analyzeGitHub(repoUrl, instruction);
       } else {
         if (!selectedFile) {
           setUiState((prev) => ({
@@ -91,7 +91,7 @@ const Analysis = () => {
           }));
           return;
         }
-        result = await migrationService.analyzeZip(selectedFile);
+        result = await migrationService.analyzeZip(selectedFile, instruction);
       }
 
       setProjectData({
@@ -132,11 +132,11 @@ const Analysis = () => {
       let result;
       if (projectId) {
         // If we have a projectId, use the current structure to migrate
-        result = await migrationService.migrate(projectId, structure);
+        result = await migrationService.migrate(projectId, structure, false, instruction);
       } else if (inputType === "url") {
-        result = await migrationService.migrateFromGitHub(repoUrl);
+        result = await migrationService.migrateFromGitHub(repoUrl, instruction);
       } else {
-        result = await migrationService.migrateFromZip(selectedFile);
+        result = await migrationService.migrateFromZip(selectedFile, instruction);
       }
 
       // Show success message
@@ -354,7 +354,7 @@ const Analysis = () => {
                               disabled={isLoading}
                             />
                           </label>
-                          <p className="pl-1">or drag and drop</p>
+
                         </div>
                         <p className="text-xs text-gray-500">
                           ZIP file up to 10MB
@@ -400,46 +400,46 @@ const Analysis = () => {
                 />
               </div>
               <div className="flex flex-wrap justify-center gap-4 mt-4 md:flex-nowrap">
-  {/* Start Analysis Button */}
-  <button
-    type="button"
-    onClick={handleAnalysis}
-    disabled={isLoading || !isValidInput}
-    className="w-48 px-4 py-2 bg-black text-white font-medium text-base rounded-md hover:bg-gray-800 hover:text-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-black space-x-2"
-  >
-    {isAnalyzing ? (
-      <span className="flex items-center space-x-2">
-        <Loader className="animate-spin w-5 h-5" />
-        <span>Analyzing...</span>
-      </span>
-    ) : (
-      <span className="flex items-center space-x-2">
-        <Search className="w-5 h-5" />
-        <span>Start Analysis</span>
-      </span>
-    )}
-  </button>
+                {/* Start Analysis Button */}
+                <button
+                  type="button"
+                  onClick={handleAnalysis}
+                  disabled={isLoading || !isValidInput}
+                  className="w-48 px-4 py-2 bg-black text-white font-medium text-base rounded-md hover:bg-gray-800 hover:text-gray-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-black space-x-2"
+                >
+                  {isAnalyzing ? (
+                    <span className="flex items-center space-x-2">
+                      <Loader className="animate-spin w-5 h-5" />
+                      <span>Analyzing...</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-2">
+                      <Search className="w-5 h-5" />
+                      <span>Start Analysis</span>
+                    </span>
+                  )}
+                </button>
 
-  {/* Start Migration Button */}
-  <button
-    type="button"
-    onClick={handleMigration}
-    disabled={isLoading || !isValidInput}
-    className="w-48 px-4 py-2 bg-white text-black font-medium text-base rounded-md hover:bg-gray-200 hover:text-black transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-black space-x-2"
-  >
-    {isMigrating ? (
-      <span className="flex items-center space-x-2">
-        <Loader className="animate-spin w-5 h-5" />
-        <span>Migrating...</span>
-      </span>
-    ) : (
-      <span className="flex items-center space-x-2">
-        <ArrowRight className="w-5 h-5" />
-        <span>Start Migration</span>
-      </span>
-    )}
-  </button>
-</div>
+                {/* Start Migration Button */}
+                <button
+                  type="button"
+                  onClick={handleMigration}
+                  disabled={isLoading || !isValidInput}
+                  className="w-48 px-4 py-2 bg-white text-black font-medium text-base rounded-md hover:bg-gray-200 hover:text-black transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-black space-x-2"
+                >
+                  {isMigrating ? (
+                    <span className="flex items-center space-x-2">
+                      <Loader className="animate-spin w-5 h-5" />
+                      <span>Migrating...</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-2">
+                      <ArrowRight className="w-5 h-5" />
+                      <span>Start Migration</span>
+                    </span>
+                  )}
+                </button>
+              </div>
             </form>
           ) : (
             <div className="space-y-8">
@@ -507,7 +507,7 @@ const Analysis = () => {
                             isLoading
                               ? "opacity-50 cursor-not-allowed"
                               : "hover:bg-gray-50"
-                          } transition-colors duration-150`}
+                          }`}
                         >
                           Cancel
                         </button>
@@ -518,7 +518,7 @@ const Analysis = () => {
                             isLoading
                               ? "opacity-50 cursor-not-allowed"
                               : "hover:bg-gray-800"
-                          } transition-colors duration-150 flex items-center`}
+                          }`}
                         >
                           {isLoading ? (
                             <>
@@ -612,7 +612,7 @@ const Analysis = () => {
                     >
                       <path
                         fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414-1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                         clipRule="evenodd"
                       />
                     </svg>
