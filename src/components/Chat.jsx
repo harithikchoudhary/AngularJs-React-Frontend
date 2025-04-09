@@ -61,10 +61,15 @@ const ChatComponent = () => {
     setErrorMessage(message);
   };
 
+  // Clear error message
+  const clearError = () => {
+    setErrorMessage('');
+  };
+
   // Handle file type change
   const handleFileTypeChange = (type) => {
     // Clear error message when user selects a file type
-    setErrorMessage('');
+    clearError();
 
     setFileTypes(prev => ({
       ...prev,
@@ -98,6 +103,9 @@ const ChatComponent = () => {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to convert code');
       }
+      
+      // Clear any previous error messages on successful conversion
+      clearError();
       
       const responseData = await response.json();
 

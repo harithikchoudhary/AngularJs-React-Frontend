@@ -8,7 +8,7 @@ export const migrationService = {
     try {
       const response = await axios.post(`${API_BASE}/github/analyze`, {
         github_url: githubUrl,
-        instruction: instruction || undefined,
+        instructions: instruction || "instruction",
       });
       return {
         structure: response.data.target_structure,
@@ -26,7 +26,9 @@ export const migrationService = {
       const formData = new FormData();
       formData.append("file", file);
       if (instruction) {
-        formData.append("instruction", instruction);
+        formData.append("instructions", instruction);
+      }else{
+        formData.append("instructions", "instruction");
       }
       
       const response = await axios.post(`${API_BASE}/zip/analyze`, formData, {
@@ -51,7 +53,7 @@ export const migrationService = {
         `${API_BASE}/github`,
         {
           github_url: githubUrl,
-          instruction: instruction || undefined,
+          instructions: instruction || "instruction", 
         },
         {
           responseType: "blob",
@@ -77,9 +79,7 @@ export const migrationService = {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      if (instruction) {
-        formData.append("instruction", instruction);
-      }
+      formData.append("instructions", instruction || "Instruction");
       
       const response = await axios.post(`${API_BASE}/zip`, formData, {
         headers: {
