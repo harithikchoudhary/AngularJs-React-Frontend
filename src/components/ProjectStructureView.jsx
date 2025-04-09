@@ -16,6 +16,12 @@ export const ProjectStructureView = ({
   const [newItemType, setNewItemType] = useState(null); // 'file' or 'folder'
   const [newItemPath, setNewItemPath] = useState("");
   const [newItemName, setNewItemName] = useState("");
+  const [rawDependenciesInput, setRawDependenciesInput] = useState("");
+  const [rawSourceFilesInput, setRawSourceFilesInput] = useState("");
+  const [editingRawDependenciesInput, setEditingRawDependenciesInput] =
+    useState("");
+  const [editingRawSourceFilesInput, setEditingRawSourceFilesInput] =
+    useState("");
   const [newItemData, setNewItemData] = useState({
     description: "",
     file_type: "js",
@@ -51,6 +57,8 @@ export const ProjectStructureView = ({
         : [],
     };
     setEditingFile({ path: filePath, data });
+    setEditingRawDependenciesInput(data.dependencies?.join(", ") || "");
+    setEditingRawSourceFilesInput(data.source_files?.join(", ") || "");
   };
 
   const handleFileSave = (filePath, updatedData) => {
@@ -67,15 +75,24 @@ export const ProjectStructureView = ({
       if (!current) return; // Path doesn't exist
     }
 
+    // Process dependencies and source files
+    const dependencies = editingRawDependenciesInput
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean);
+
+    const source_files = editingRawSourceFilesInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     // Update the file data
     const fileName = pathSegments[pathSegments.length - 1];
     if (current[fileName]) {
-      // Ensure source_files is properly set as an array
       current[fileName] = {
         ...updatedData,
-        source_files: Array.isArray(updatedData.source_files)
-          ? updatedData.source_files
-          : [],
+        dependencies: dependencies,
+        source_files: source_files,
         file_name: fileName,
         relative_path: filePath,
       };
@@ -105,6 +122,8 @@ export const ProjectStructureView = ({
     setIsAddingNew(true);
     // Reset the form data
     setNewItemName("");
+    setRawDependenciesInput("");
+    setRawSourceFilesInput("");
     setNewItemData({
       description: "",
       file_type: "js",
@@ -130,26 +149,26 @@ export const ProjectStructureView = ({
       current = current[segment];
     }
 
+    // Process dependencies and source files
+    const dependencies = rawDependenciesInput
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean);
+
+    const source_files = rawSourceFilesInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     // Add the new item
     if (newItemType === "folder") {
       current[newItemName] = {};
     } else {
-      // Add new file with the expected data structure
-      // Ensure source_files is an array
-      const source_files = Array.isArray(newItemData.source_files)
-        ? newItemData.source_files
-        : typeof newItemData.source_files === "string"
-        ? newItemData.source_files
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [];
-
       current[newItemName] = {
         file_name: newItemName,
         file_type: newItemData.file_type,
         description: newItemData.description,
-        dependencies: newItemData.dependencies || [],
+        dependencies: dependencies,
         source_files: source_files,
         relative_path: `${newItemPath}/${newItemName}`.replace(/^\//, ""),
         migration_complexity: newItemData.migration_complexity || "low",
@@ -165,6 +184,8 @@ export const ProjectStructureView = ({
     onStructureChange(newStructure);
     setIsAddingNew(false);
     setNewItemName("");
+    setRawDependenciesInput("");
+    setRawSourceFilesInput("");
     setNewItemData({
       description: "",
       file_type: "js",
@@ -212,21 +233,25 @@ export const ProjectStructureView = ({
 
   const handleAddFiles = () => {
     if (!rawInput.trim()) return;
-    
+
     const newFiles = rawInput
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean); // Remove empty values
-  
+
     if (newFiles.length > 0) {
       setNewItemData((prevData) => ({
         ...prevData,
-        source_files: [...(Array.isArray(prevData.source_files) ? prevData.source_files : []), ...newFiles],
+        source_files: [
+          ...(Array.isArray(prevData.source_files)
+            ? prevData.source_files
+            : []),
+          ...newFiles,
+        ],
       }));
       setRawInput(""); // Reset input field
     }
   };
-
 
   const renderAddNewForm = () => {
     return (
@@ -325,62 +350,24 @@ export const ProjectStructureView = ({
                 </label>
                 <input
                   type="text"
-                  value={newItemData.dependencies?.join(", ") || ""}
-                  onChange={(e) =>
-                    setNewItemData({
-                      ...newItemData,
-                      dependencies: e.target.value
-                        .split(",")
-                        .map((d) => d.trim())
-                        .filter(Boolean),
-                    })
-                  }
+                  value={rawDependenciesInput}
+                  onChange={(e) => setRawDependenciesInput(e.target.value)}
                   placeholder="react, react-dom, etc."
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div>
-  <label className="block text-sm font-medium text-gray-700">
-    Source Files (comma separated)
-  </label>
-  <div className="flex flex-col space-y-2">
-    {/* Display the current source files */}
-    {Array.isArray(newItemData.source_files) && newItemData.source_files.length > 0 && (
-      <div className="flex flex-wrap gap-1">
-        {newItemData.source_files.map((file, index) => (
-          <span key={index} className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded">
-            {file}
-            <button 
-              onClick={() => {
-                const updatedFiles = newItemData.source_files.filter((_, i) => i !== index);
-                setNewItemData({...newItemData, source_files: updatedFiles});
-              }}
-              className="ml-1 text-blue-600 hover:text-blue-800"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-    )}
-    
-    {/* Input for adding new files */}
-    <input
-      type="text"
-      value={rawInput}
-      onChange={handleInputChange}
-      onBlur={handleAddFiles}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleAddFiles();
-        }
-      }}
-      placeholder="Type file names and press Enter"
-      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-    />
-  </div>
-</div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Source Files (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={rawSourceFilesInput}
+                  onChange={(e) => setRawSourceFilesInput(e.target.value)}
+                  placeholder="Enter source files, separated by commas"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
             </>
           )}
 
@@ -703,50 +690,25 @@ export const ProjectStructureView = ({
                 </label>
                 <input
                   type="text"
-                  value={(editingFile.data.dependencies || []).join(", ")}
+                  value={editingRawDependenciesInput}
                   onChange={(e) =>
-                    setEditingFile({
-                      ...editingFile,
-                      data: {
-                        ...editingFile.data,
-                        dependencies: e.target.value
-                          .split(",")
-                          .map((d) => d.trim())
-                          .filter(Boolean),
-                      },
-                    })
+                    setEditingRawDependenciesInput(e.target.value)
                   }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Source Files (comma separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={
-                      Array.isArray(editingFile.data.source_files)
-                        ? editingFile.data.source_files.join(", ")
-                        : ""
-                    }
-                    onChange={(e) =>
-                      setEditingFile({
-                        ...editingFile,
-                        data: {
-                          ...editingFile.data,
-                          source_files: e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        },
-                      })
-                    }
-                    placeholder="Enter source files, separated by commas"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Source Files (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={editingRawSourceFilesInput}
+                  onChange={(e) =>
+                    setEditingRawSourceFilesInput(e.target.value)
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
